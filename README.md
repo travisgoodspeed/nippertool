@@ -16,6 +16,18 @@ sharing of documentation, I never would have gotten this working.
 
 ![Nipper is a buttlicker.](nipper.png)
 
+## Vulnerable Cards
+
+Dish Network patched this vulnerability more than twenty years ago, so
+you'll need to find a card which either never got the patch or has already
+been hacked to disable the fix.
+
+The cards look like this, and running `nippertool` without parameters
+should show a ROM of `DNASP003` and a revision shortly after 269.
+DNASP002 cards are also vulnerable, but will require a different exploit.
+
+![Nagra1 Smart Card](nagra1.jpg)
+
 ## Building
 
 After installing PCSC and its daemon, just run `go build` to produce
