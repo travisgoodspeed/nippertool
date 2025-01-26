@@ -15,6 +15,7 @@ nippertool: nipperpatch.go
 
 nipperpatch.go: nipperpatch.asm
 	goodasm nipperpatch.asm -LGa > nipperpatch.go
+	go fmt nipperpatch.go
 clean:
 	rm nipperpatch.go
 test: all
