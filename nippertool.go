@@ -105,8 +105,11 @@ func printhex(data []byte) {
 // Grabs 32 bytes from an arbitrary start address.
 func nipperpeek(adr uint16) []byte {
 	exploit := nipperpatch
-	exploit[0xad] = byte(adr >> 8)
-	exploit[0xae] = byte(adr & 0xFF)
+
+	// The "lda @0xffff, x" needs to altered to point to the desired address.
+	offset := nipperpatchSymbols["loop"] + 1
+	exploit[offset] = byte(adr >> 8)
+	exploit[offset+1] = byte(adr & 0xFF)
 
 	if verbose {
 		fmt.Printf("Sending 0x%02x bytes transaction.\n", len(exploit))
