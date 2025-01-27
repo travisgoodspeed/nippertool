@@ -15,9 +15,12 @@ nippertool: nipperpatch.go
 
 nipperpatch.go: nipperpatch.asm
 	goodasm nipperpatch.asm -LGa > nipperpatch.go
-	go fmt nipperpatch.go
 clean:
-	rm nipperpatch.go
+	rm -f nipperpatch.go
+
+quicktest: all
+	sudo ./nippertool -peek 0x4000 | grep "06 01 1b cc 20 00 20 fe 06 01 1e cc 20 09 20 fe "
+
 test: all
 # Dump ROM3 from the card.
 	sudo nippertool -dumprom rom3.bin

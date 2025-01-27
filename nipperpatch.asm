@@ -32,15 +32,9 @@
 ;;; necessary for USB readers in 2022.
 
 	;; Entry point for our shellcode.
-	nop
-	nop
-	nop
-	nop
 
-	;; Data begins at 0x19C+2
+	;; Data begins at 0x19C+2.  We copy backward from the last byte.
 	ldx #0x21
-	nop
-	nop
 
 loop:
 	lda @0xffff, x          ; 0xffff replaced with source address.
@@ -48,16 +42,23 @@ loop:
 	dec x
 	bpl loop
 
-	nop
-
         ;; Call respondax(0x93, 0x40) to transmit packet.
 	lda #0x93		; Response code 0x93.
 	ldx #0x40		; Length in bytes.
 	.equ respondax 0x757f
-	jsr @respondax		; Send response.
+	jsr respondax		; Send response.
+
+        rsp                     ; Reset the stack pointer.
+        .equ RESET 0x4000       ; 4000 for total reset
+        jp RESET
+
+        ;; Got about three bytes free here.
 
 	;; These three bytes will be clobbered.  Don't rely on them.
+        .org 0xbd
 	.db 0, 0, 0
 	;; These bytes set the entry point of 0x0060.
+        ;; .org 0xc0
 	.db 0x00, 0x00, 0x00, 0x60
-	
+
+
