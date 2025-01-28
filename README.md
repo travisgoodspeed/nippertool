@@ -12,6 +12,12 @@ A billion thanks are due to Chris Gerlinsky, who introduced me to this
 bug over beers in Montréal.  Without his storytelling or his generous
 sharing of documentation, I never would have gotten this working.
 
+If you enjoy reading or running this code, you might also enjoy by new
+book, [Microcontroller
+Exploits](https://nostarch.com/microcontroller-exploits), also
+[available](https://www.amazon.com/Microcontroller-Exploits-Travis-Goodspeed/dp/1718503881)
+from Amazon.
+
 --Travis Goodspeeed
 
 ![Nipper is a buttlicker.](nipper.png)
