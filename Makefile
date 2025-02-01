@@ -15,6 +15,8 @@ nippertool: nipperpatch.go
 
 nipperpatch.go: nipperpatch.asm
 	goodasm nipperpatch.asm -LGa > nipperpatch.go
+listing: nipperpatch.asm
+	goodasm nipperpatch.asm -Lab
 clean:
 	rm -f nipperpatch.go
 
@@ -23,10 +25,11 @@ quicktest: all
 
 test: all
 # Dump ROM3 from the card.
-	sudo nippertool -dumprom rom3.bin
+	sudo nippertool -dumprom rom3.bin -progress
 # Take its MD5 hash.
 	md5sum -c md5.txt
 
-
+try: all
+	sudo ./nippertool -peek 0x4000 -verbose
 
 

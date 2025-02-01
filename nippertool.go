@@ -29,6 +29,7 @@ import (
 	"fmt"  // Used for Printf debugging.
 
 	"os" // Used for file I/O
+	"time" // Sleeping for reset.
 
 	"github.com/cheggaaa/pb/v3"        //Progress bar.
 	"github.com/sf1/go-card/smartcard" //PCSCd client lib.  Doesn't work in macOS.
@@ -47,6 +48,9 @@ var verbose bool
 
 // Show the progress bar.
 var progress bool
+
+// Previous PCB.  Inverse must be stored to 0x35 by exploit.
+var lastpcb byte
 
 // Fails on an error, but prints it first.
 func check(e error) {
@@ -78,6 +82,11 @@ func getserial() {
 
 	response, err := card.TransmitAPDU(command)
 	check(err)
+	
+	lastpcb = response[1]
+	if verbose {
+		fmt.Printf("PCB: %02x\n", lastpcb);
+	}
 
 	//Sanity check.
 	if response[0] != 0x92 || response[1] != 0x04 || response[6] != 0x90 || response[7] != 0x00 {
@@ -107,29 +116,41 @@ func nipperpeek(adr uint16) []byte {
 	exploit := nipperpatch
 
 	// The "lda @0xffff, x" needs to altered to point to the desired address.
-	offset := nipperpatchSymbols["loop"] + 1
+	offset := nipperpatchSymbols["loop"] - nipperpatchSymbols["base"] + 1
 	exploit[offset] = byte(adr >> 8)
 	exploit[offset+1] = byte(adr & 0xFF)
+
 
 	if verbose {
 		fmt.Printf("Sending 0x%02x bytes transaction.\n", len(exploit))
 		fmt.Printf("Attempted to read 32 bytes from %04x.\n", adr)
 	}
 
+	
 	response, err := card.TransmitAPDU(exploit)
+	
 
 	if verbose {
 		fmt.Printf("%s\n", response)
 	}
-	check(err)
+	for err!=nil || response[0]!=0x93 {
+		if verbose {
+			fmt.Printf("%s\n", err)
+		}
+		reconnect();
+		
+		response, err = card.TransmitAPDU(exploit)
+	}
 
-	//Necessary for configuration, if a little ugly.
-	reconnect()
-
+	lastpcb = response[1]
 	resp := response[5:(0x20 + 5)]
 	if verbose {
+		fmt.Printf("PCB: %02x\n", lastpcb);
 		fmt.Printf("%02x : %s\n", len(resp), resp)
 	}
+
+	//getserial()
+	
 	return resp
 }
 
@@ -161,24 +182,33 @@ func getblock(start uint16, len uint16) []byte {
 
 	tmpl := `{{string . "adr" | blue}} {{ bar . "<" "-" (cycle . "↖" "↗" "↘" "↙" ) "." ">"}} {{speed . | green }} {{percent .}}  `
 
-	bar := pb.StartNew(int(len))
-	bar.Set("adr", fmt.Sprintf("$%04x", start))
+	var bar *pb.ProgressBar
 
-	bar.SetTemplateString(tmpl)
-	bar.Set(pb.Bytes, true)
+	if progress {
+		bar = pb.StartNew(int(len))
+		bar.Set("adr", fmt.Sprintf("$%04x", start))
+		bar.SetTemplateString(tmpl)
+		bar.Set(pb.Bytes, true)
+	}
 
 	for i := 0; i < int(len); i++ {
 		if i%32 == 0 {
 			//Grab 32 bytes if it's time for the next chunk.
 			chunk = nipperpeek(start + uint16(i))
-			bar.Set("adr", fmt.Sprintf("$%04x", int(start)+i))
+			if progress{
+				bar.Set("adr", fmt.Sprintf("$%04x", int(start)+i))
+			}
 		}
-		bar.Increment()
+		if progress {
+			bar.Increment()
+		}
 		buffer[i] = chunk[i%32]
 	}
 
-	bar.Set("adr", fmt.Sprintf("$%04x", start+len))
-	bar.Finish()
+	if progress{
+		bar.Set("adr", fmt.Sprintf("$%04x", start+len))
+		bar.Finish()
+	}
 
 	return buffer[0:len]
 }
@@ -229,17 +259,28 @@ func info() {
 
 // For continuation, it's convenient to disconnect from the card and reconnect.
 func reconnect() {
+	if verbose {
+		fmt.Printf("Reconnecting.\n");
+	}
+	
 	//A very lazy form of continuation, but it works.
 	card.Disconnect()
+	//time.Sleep(500 * time.Millisecond)
 	newcard, err := reader.Connect()
+	//time.Sleep(500 * time.Millisecond)
 	check(err)
 	card = newcard
+
+
+	time.Sleep(1 * time.Millisecond) // 155 bps
+	//time.Sleep(20 * time.Millisecond) // 140 bps
+	//time.Sleep(50 * time.Millisecond) // 75 bps
 }
 
 // Main method.
 func main() {
 	flag.BoolVar(&verbose, "verbose", false, "Verbose output for debugging.")
-	flag.BoolVar(&progress, "progress", true, "Interactive progress meter.")
+	flag.BoolVar(&progress, "progress", false, "Interactive progress meter.")
 	peek := flag.Int("peek", -1, "Prints a block from a hex address.")
 	dumpeeprom := flag.String("dumpeeprom", "", "Downloads EEPROM from $E000 to a .bin file.")
 	dumpram := flag.String("dumpram", "", "Downloads SRAM from $0020 to a .bin file.")
