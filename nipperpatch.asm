@@ -5,7 +5,10 @@
         .org 0x019c
 
 
-;;;  Handy symbols for ROM3.
+;;; Symbols for registers
+        .equ EECTRL 0x03
+
+;;; Handy symbols for ROM3.
         .equ RESPONDAX 0x757f   ; Transmit a response with header and checksum.
         .equ RESET 0x401E       ; ROM Reset Handler
         .equ RESYNC 0x4177
@@ -13,7 +16,8 @@
         .equ STACKCHECK 0x40ed  ; ROM function to check the call stack.
         .equ IDLETOP 0x7385
         .equ BACKTOIDLE 0x7a48
-        .equ BLOCKPARROT 0x7A4C 
+        .equ BLOCKPARROT 0x7A4C
+        .equ RESPOND 0x75AE
 
 base:   
 ;;; Early part will be clobbered by our transmit script.
@@ -31,21 +35,12 @@ loop:
 	dec x
 	bpl loop
 
-
-        rsp
-        
         ;; Call respondax(0x93, 0x40) to transmit packet.
 	lda #0x93		; Response code 0x93.
 	ldx #0x40		; Length in bytes.  Longer than our message.
- 	jp RESPONDAX		; Send response.
-;;;        jsr RESPONDAX		; Send response.
-
-spin:   mul a, x
-        mul a, x
-        mul a, x
-
-        bra spin
-        jp RESET
+        jsr RESPONDAX		; Send response.
+        jmp IDLETOP
+        
 
 
 ;;; This is a 32 byte gap at 0x1200 (ghost of 0x0000)
